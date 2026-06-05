@@ -4,7 +4,7 @@ import joblib
 import re
 
 # ==========================================
-# 1. THE CLASS DEFINITION (Required for unpickling)
+# 1. THE CLASS DEFINITION (Must match your Colab code)
 # ==========================================
 class IndieSuccessPredictor:
     def __init__(self):
@@ -29,7 +29,6 @@ class IndieSuccessPredictor:
 # ==========================================
 st.set_page_config(page_title="Indie Hit Predictor", page_icon="🎮", layout="centered")
 
-# Load the model once into memory
 @st.cache_resource
 def load_brain():
     model = IndieSuccessPredictor()
@@ -38,23 +37,45 @@ def load_brain():
 
 predictor = load_brain()
 
-# Build the Website Header
 st.title("🎮 Indie Game Success Predictor")
 st.markdown("Enter your game pitch below to see if it matches current Steam player trends for a breakout hit.")
 
-# Build the Input Form
+# --- NEW UI ELEMENT: Month Mapping ---
+MONTHS = [
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
+]
+
+# --- NEW UI ELEMENT: Popular Steam Tags ---
+POPULAR_TAGS = [
+    "Indie", "Action", "Adventure", "RPG", "Simulation", "Strategy", "Puzzle", 
+    "Pixel Graphics", "2D", "3D", "Story Rich", "Atmospheric", "Multiplayer", 
+    "Co-op", "Singleplayer", "Rogue-like", "Rogue-lite", "Platformer", 
+    "Early Access", "Horror", "Survival", "Open World", "Visual Novel", 
+    "Casual", "Turn-Based", "Sci-Fi", "Fantasy", "Anime", "First-Person", 
+    "Third-Person", "Shooter", "Management", "Base Building", "Farming Sim", 
+    "Sandbox", "Physics", "Funny", "Difficult", "Cute", "Relaxing", "Retro", 
+    "Arcade", "Local Co-Op", "Online Co-Op", "PvP", "Crafting", "Exploration"
+]
+
 with st.form("game_pitch_form"):
     st.subheader("Game Details")
     
     col1, col2 = st.columns(2)
     with col1:
         price = st.number_input("Game Price ($)", min_value=0.0, max_value=100.0, value=14.99, step=1.0)
-        release_month = st.selectbox("Target Release Month", range(1, 13), index=9) # Default Oct
+        # Replaced the number input with a month name dropdown (Defaults to October / index 9)
+        selected_month = st.selectbox("Target Release Month", MONTHS, index=9) 
     with col2:
         achievements = st.number_input("Number of Achievements", min_value=0, value=20)
         release_year = st.selectbox("Target Release Year", [2024, 2025, 2026], index=1)
         
-    tags = st.text_input("Steam Tags (comma separated)", "Indie, Pixel Graphics, Action, Rogue-like")
+    # Replaced the text input with a searchable multiselect dropdown
+    selected_tags = st.multiselect(
+        "Steam Tags (Select all that apply)", 
+        options=POPULAR_TAGS, 
+        default=["Indie", "Pixel Graphics", "Action"] # What is selected by default
+    )
     
     st.subheader("Platform Support")
     col3, col4, col5 = st.columns(3)
@@ -68,26 +89,30 @@ with st.form("game_pitch_form"):
 # 3. PREDICTION LOGIC
 # ==========================================
 if submitted:
-    # Package the inputs into the JSON dictionary our model expects
+    
+    # Convert the month name back into a number for the ML model (e.g., "January" -> 1)
+    month_number = MONTHS.index(selected_month) + 1
+    
+    # Convert the list of tags back into a comma-separated string for the ML model
+    tags_string = ", ".join(selected_tags)
+    
     user_data = {
         'price': price, 'required_age': 0, 'dlc_count': 0, 'achievements': achievements,
         'windows': windows, 'mac': mac, 'linux': linux, 
-        'release_year': release_year, 'release_month': release_month, 'tags': tags
+        'release_year': release_year, 'release_month': month_number, 
+        'tags': tags_string
     }
     
-    # Run the prediction
     with st.spinner('Analyzing Steam market trends...'):
         prob = predictor.predict_success(user_data)
     
-    # Display the results beautifully
     st.divider()
     st.subheader("Prediction Results")
-    
     st.progress(prob)
     st.metric(label="Probability of becoming an Indie Hit", value=f"{prob * 100:.2f}%")
     
-    if prob >= 0.20: # Our tuned threshold!
-        st.success("✅ GREEN LIGHT! This game matches the metadata signature of highly successful indie games. Proceed with development!")
+    if prob >= 0.20:
+        st.success("✅ GREEN LIGHT! This game matches the metadata signature of highly successful indie games.")
     elif prob >= 0.05:
         st.warning("⚠️ MODERATE RISK. The market is saturated. Consider refining your genres or adjusting your price point.")
     else:
