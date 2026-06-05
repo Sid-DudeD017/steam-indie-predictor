@@ -81,7 +81,7 @@ with st.form("game_pitch_form"):
     submitted = st.form_submit_button("Predict Success Probability")
 
 # ==========================================
-# 3. PREDICTION LOGIC & DYNAMIC INSIGHTS
+# 3. PREDICTION & AI OPTIMIZER LOGIC
 # ==========================================
 if submitted:
     month_number = MONTHS.index(selected_month) + 1
@@ -95,51 +95,113 @@ if submitted:
     }
     
     with st.spinner('Analyzing Steam market trends...'):
-        prob = predictor.predict_success(user_data)
+        base_prob = predictor.predict_success(user_data)
     
     st.divider()
     st.subheader("Prediction Results")
+    st.progress(base_prob)
+    st.metric(label="Probability of becoming an Indie Hit", value=f"{base_prob * 100:.2f}%")
     
-    st.progress(prob)
-    st.metric(label="Probability of becoming an Indie Hit", value=f"{prob * 100:.2f}%")
-    
-    # --- UPGRADED: Much larger context note! ---
     st.markdown("##### 📊 Market Context")
-    st.markdown("> **Note:** The global success rate for new Indie games on Steam is roughly **6%**. A score above **10%** means your baseline metadata is severely outperforming the market!")
-    
-    if prob >= 0.20:
-        st.success("✅ **GREEN LIGHT!** This game matches the metadata signature of highly successful indie games.")
-    elif prob >= 0.08:
-        st.warning("⚠️ **MODERATE RISK.** You have a solid foundation, but the market is competitive.")
-    else:
-        st.error("❌ **HIGH RISK.** Games with this exact profile historically struggle to find an audience.")
+    st.markdown("> **Note:** The global success rate for new Indie games on Steam is roughly **6%**. A score above **15%** means your baseline metadata is severely outperforming the market!")
 
+    # ==========================================
+    # 4. THE AI CONSULTANT (Counterfactual Optimizer)
+    # ==========================================
     st.divider()
-    st.subheader("💡 How to improve your score")
+    st.subheader("💡 AI Consultant: Optimization Path")
     
-    advice_given = False
+    target_prob = 0.15 # Our 15% Baseline goal
     
-    if not mac or not linux:
-        st.info("💻 **Platform Support:** Your game is missing Mac/Linux support. Adding alternative OS support historically boosts visibility and model confidence.")
-        advice_given = True
+    if base_prob >= target_prob:
+        st.success("🌟 **Your metadata is fully optimized!** You are already above the mathematical baseline. Keep building your masterpiece!")
+    else:
+        st.markdown(f"Your score is currently below the **15% baseline**. Our AI has simulated thousands of alternate realities and found a mathematical path to boost your success chances:")
         
-    if price > 20.0:
-        st.info("💰 **Pricing Strategy:** Games priced over $20 face fierce competition from AAA studios. Consider lowering to the $10-$15 sweet spot.")
-        advice_given = True
+        simulated_data = user_data.copy()
+        current_sim_prob = base_prob
         
-    if len(selected_tags) < 5:
-        st.info("🏷️ **Tagging:** The Steam algorithm relies heavily on tags. Aim for at least 5-7 accurate tags.")
-        advice_given = True
-        
-    if achievements == 0:
-        st.info("🏆 **Achievements:** Games with 0 achievements often see lower player retention. Adding even 10 basic achievements can boost your math.")
-        advice_given = True
-        
-    if not advice_given:
-        st.success("🌟 Your metadata is fully optimized! At this point, success comes down to your marketing, art style, and gameplay loop.")
+        # Define the AI's "Bag of Tricks"
+        def try_platforms(d):
+            if not d['mac'] or not d['linux']:
+                new_d = d.copy()
+                new_d['mac'] = True; new_d['linux'] = True
+                return new_d, "💻 **Platforms:** Build for Mac & Linux"
+            return None, ""
+            
+        def try_price(d):
+            if d['price'] > 19.99:
+                new_d = d.copy(); new_d['price'] = 14.99
+                return new_d, "💰 **Pricing:** Drop price to $14.99 to avoid AAA competition"
+            elif d['price'] > 9.99:
+                new_d = d.copy(); new_d['price'] = 9.99
+                return new_d, "💰 **Pricing:** Drop price to $9.99 (The indie sweet-spot)"
+            return None, ""
+            
+        def try_achievements(d):
+            if d['achievements'] < 30:
+                new_d = d.copy(); new_d['achievements'] = 30
+                return new_d, "🏆 **Achievements:** Add at least 30 achievements for player retention"
+            return None, ""
+            
+        def try_month(d):
+            if d['release_month'] in [9, 10, 11, 12]:
+                new_d = d.copy(); new_d['release_month'] = 5
+                return new_d, "📅 **Release Window:** Delay launch from Q4 Holiday rush to May"
+            return None, ""
+            
+        def try_tags(d):
+            new_d = d.copy()
+            if 'Singleplayer' not in new_d['tags']:
+                new_d['tags'] += ", Singleplayer"
+                return new_d, "🏷️ **Tags:** Add specific playstyle tags (e.g., 'Singleplayer')"
+            elif 'Atmospheric' not in new_d['tags']:
+                new_d['tags'] += ", Atmospheric"
+                return new_d, "🏷️ **Tags:** Add mood-based tags (e.g., 'Atmospheric')"
+            return None, ""
 
-    # --- BRAND NEW: Inspiration Note ---
+        tricks = [try_platforms, try_price, try_achievements, try_month, try_tags]
+        used_tricks = set()
+        
+        # The Greedy Optimizer Loop
+        while current_sim_prob < target_prob and len(used_tricks) < len(tricks):
+            best_trick = None
+            best_data = None
+            best_msg = ""
+            best_new_prob = current_sim_prob
+            
+            # Test every unused trick to find the one that gives the BIGGEST boost
+            for trick in tricks:
+                if trick in used_tricks: continue
+                
+                test_data, msg = trick(simulated_data)
+                if test_data is not None:
+                    test_prob = predictor.predict_success(test_data)
+                    if test_prob > best_new_prob:
+                        best_new_prob = test_prob
+                        best_data = test_data
+                        best_msg = msg
+                        best_trick = trick
+            
+            # If the best trick actually helped, apply it and show the user!
+            if best_data is not None:
+                impact = best_new_prob - current_sim_prob
+                st.info(f"{best_msg}  \n*(Boosts score by **+{impact*100:.2f}%** ➔ New Projected Score: **{best_new_prob*100:.2f}%**)*")
+                
+                simulated_data = best_data
+                current_sim_prob = best_new_prob
+                used_tricks.add(best_trick)
+            else:
+                break # Mathematically impossible to push the score any higher with our tricks
+        
+        # Closing statements based on how the optimization went
+        if current_sim_prob >= target_prob:
+            st.success(f"🎉 **Goal Reached!** Following these exact steps puts your game mathematically above the top-tier indie baseline.")
+        else:
+            st.warning(f"📈 **Max Optimized Score: {current_sim_prob*100:.2f}%**. The AI has exhausted all metadata optimizations and cannot reach 15%. However, remember the note below!")
+
+    # --- INSPIRATIONAL ENCOURAGEMENT ---
     st.divider()
     st.markdown("### ❤️ A Note to Developers")
     st.markdown("> *\"True art ascends even the most accurate predictions.\"*")
-    st.markdown("Machine learning models only know the past, but **you are building the future**. This algorithm looks at spreadsheets, but it cannot measure your passion, your unique art style, the tightness of your gameplay loop, or the story you are trying to tell. Use this tool to optimize your store page, but **never let a machine tell you to give up on your masterpiece.** Keep building!")
+    st.markdown("Machine learning models only know the past, but **you are building the future**. This algorithm looks at cold spreadsheets, but it cannot measure your passion, your unique art style, the tightness of your gameplay loop, or the story you are trying to tell. Use this tool to optimize your store page, but **never let a machine tell you to give up on your masterpiece.** Keep building!")
