@@ -56,7 +56,6 @@ POPULAR_TAGS = [
     "Sandbox", "Physics", "Funny", "Difficult", "Cute", "Relaxing", "Retro"
 ]
 
-# --- THE DYNAMIC DATE FIX ---
 current_year = datetime.datetime.now().year
 dynamic_years = [current_year, current_year + 1, current_year + 2]
 
@@ -69,7 +68,6 @@ with st.form("game_pitch_form"):
         selected_month = st.selectbox("Target Release Month", MONTHS, index=9) 
     with col2:
         achievements = st.number_input("Number of Achievements", min_value=0, value=20)
-        # Replaced hardcoded years with our new dynamic list!
         release_year = st.selectbox("Target Release Year", dynamic_years)
         
     selected_tags = st.multiselect("Steam Tags (Select all that apply)", options=POPULAR_TAGS, default=["Indie", "Action"])
@@ -102,12 +100,12 @@ if submitted:
     st.divider()
     st.subheader("Prediction Results")
     
-    # Progress bar and Main Metric
     st.progress(prob)
     st.metric(label="Probability of becoming an Indie Hit", value=f"{prob * 100:.2f}%")
     
-    # Context for the user so they don't feel bad about a 2% score!
-    st.caption("*(Note: The global success rate for new Indie games on Steam is roughly 6%. A score above 10% means you are severely outperforming the market baseline!)*")
+    # --- UPGRADED: Much larger context note! ---
+    st.markdown("##### 📊 Market Context")
+    st.markdown("> **Note:** The global success rate for new Indie games on Steam is roughly **6%**. A score above **10%** means your baseline metadata is severely outperforming the market!")
     
     if prob >= 0.20:
         st.success("✅ **GREEN LIGHT!** This game matches the metadata signature of highly successful indie games.")
@@ -116,7 +114,6 @@ if submitted:
     else:
         st.error("❌ **HIGH RISK.** Games with this exact profile historically struggle to find an audience.")
 
-    # --- BRAND NEW UX FEATURE: DYNAMIC ADVICE ---
     st.divider()
     st.subheader("💡 How to improve your score")
     
@@ -131,7 +128,7 @@ if submitted:
         advice_given = True
         
     if len(selected_tags) < 5:
-        st.info("🏷️ **Tagging:** The Steam algorithm relies heavily on tags. Aim for at least 5-7 accurate tags (e.g., add 'Singleplayer' or 'Atmospheric').")
+        st.info("🏷️ **Tagging:** The Steam algorithm relies heavily on tags. Aim for at least 5-7 accurate tags.")
         advice_given = True
         
     if achievements == 0:
@@ -140,3 +137,9 @@ if submitted:
         
     if not advice_given:
         st.success("🌟 Your metadata is fully optimized! At this point, success comes down to your marketing, art style, and gameplay loop.")
+
+    # --- BRAND NEW: Inspiration Note ---
+    st.divider()
+    st.markdown("### ❤️ A Note to Developers")
+    st.markdown("> *\"True art ascends even the most accurate predictions.\"*")
+    st.markdown("Machine learning models only know the past, but **you are building the future**. This algorithm looks at spreadsheets, but it cannot measure your passion, your unique art style, the tightness of your gameplay loop, or the story you are trying to tell. Use this tool to optimize your store page, but **never let a machine tell you to give up on your masterpiece.** Keep building!")
