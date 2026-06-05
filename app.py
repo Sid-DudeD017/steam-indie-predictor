@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import joblib
 import re
+import datetime
 
 # ==========================================
-# 1. THE CLASS DEFINITION (Must match your Colab code)
+# 1. THE CLASS DEFINITION
 # ==========================================
 class IndieSuccessPredictor:
     def __init__(self):
@@ -40,13 +41,11 @@ predictor = load_brain()
 st.title("🎮 Indie Game Success Predictor")
 st.markdown("Enter your game pitch below to see if it matches current Steam player trends for a breakout hit.")
 
-# --- NEW UI ELEMENT: Month Mapping ---
 MONTHS = [
     "January", "February", "March", "April", "May", "June", 
     "July", "August", "September", "October", "November", "December"
 ]
 
-# --- NEW UI ELEMENT: Popular Steam Tags ---
 POPULAR_TAGS = [
     "Indie", "Action", "Adventure", "RPG", "Simulation", "Strategy", "Puzzle", 
     "Pixel Graphics", "2D", "3D", "Story Rich", "Atmospheric", "Multiplayer", 
@@ -54,9 +53,12 @@ POPULAR_TAGS = [
     "Early Access", "Horror", "Survival", "Open World", "Visual Novel", 
     "Casual", "Turn-Based", "Sci-Fi", "Fantasy", "Anime", "First-Person", 
     "Third-Person", "Shooter", "Management", "Base Building", "Farming Sim", 
-    "Sandbox", "Physics", "Funny", "Difficult", "Cute", "Relaxing", "Retro", 
-    "Arcade", "Local Co-Op", "Online Co-Op", "PvP", "Crafting", "Exploration"
+    "Sandbox", "Physics", "Funny", "Difficult", "Cute", "Relaxing", "Retro"
 ]
+
+# --- THE DYNAMIC DATE FIX ---
+current_year = datetime.datetime.now().year
+dynamic_years = [current_year, current_year + 1, current_year + 2]
 
 with st.form("game_pitch_form"):
     st.subheader("Game Details")
@@ -64,18 +66,13 @@ with st.form("game_pitch_form"):
     col1, col2 = st.columns(2)
     with col1:
         price = st.number_input("Game Price ($)", min_value=0.0, max_value=100.0, value=14.99, step=1.0)
-        # Replaced the number input with a month name dropdown (Defaults to October / index 9)
         selected_month = st.selectbox("Target Release Month", MONTHS, index=9) 
     with col2:
         achievements = st.number_input("Number of Achievements", min_value=0, value=20)
-        release_year = st.selectbox("Target Release Year", [2024, 2025, 2026], index=1)
+        # Replaced hardcoded years with our new dynamic list!
+        release_year = st.selectbox("Target Release Year", dynamic_years)
         
-    # Replaced the text input with a searchable multiselect dropdown
-    selected_tags = st.multiselect(
-        "Steam Tags (Select all that apply)", 
-        options=POPULAR_TAGS, 
-        default=["Indie", "Pixel Graphics", "Action"] # What is selected by default
-    )
+    selected_tags = st.multiselect("Steam Tags (Select all that apply)", options=POPULAR_TAGS, default=["Indie", "Action"])
     
     st.subheader("Platform Support")
     col3, col4, col5 = st.columns(3)
@@ -86,14 +83,10 @@ with st.form("game_pitch_form"):
     submitted = st.form_submit_button("Predict Success Probability")
 
 # ==========================================
-# 3. PREDICTION LOGIC
+# 3. PREDICTION LOGIC & DYNAMIC INSIGHTS
 # ==========================================
 if submitted:
-    
-    # Convert the month name back into a number for the ML model (e.g., "January" -> 1)
     month_number = MONTHS.index(selected_month) + 1
-    
-    # Convert the list of tags back into a comma-separated string for the ML model
     tags_string = ", ".join(selected_tags)
     
     user_data = {
@@ -108,12 +101,42 @@ if submitted:
     
     st.divider()
     st.subheader("Prediction Results")
+    
+    # Progress bar and Main Metric
     st.progress(prob)
     st.metric(label="Probability of becoming an Indie Hit", value=f"{prob * 100:.2f}%")
     
+    # Context for the user so they don't feel bad about a 2% score!
+    st.caption("*(Note: The global success rate for new Indie games on Steam is roughly 6%. A score above 10% means you are severely outperforming the market baseline!)*")
+    
     if prob >= 0.20:
-        st.success("✅ GREEN LIGHT! This game matches the metadata signature of highly successful indie games.")
-    elif prob >= 0.05:
-        st.warning("⚠️ MODERATE RISK. The market is saturated. Consider refining your genres or adjusting your price point.")
+        st.success("✅ **GREEN LIGHT!** This game matches the metadata signature of highly successful indie games.")
+    elif prob >= 0.08:
+        st.warning("⚠️ **MODERATE RISK.** You have a solid foundation, but the market is competitive.")
     else:
-        st.error("❌ HIGH RISK. Games with this exact profile historically struggle to find an audience on Steam.")
+        st.error("❌ **HIGH RISK.** Games with this exact profile historically struggle to find an audience.")
+
+    # --- BRAND NEW UX FEATURE: DYNAMIC ADVICE ---
+    st.divider()
+    st.subheader("💡 How to improve your score")
+    
+    advice_given = False
+    
+    if not mac or not linux:
+        st.info("💻 **Platform Support:** Your game is missing Mac/Linux support. Adding alternative OS support historically boosts visibility and model confidence.")
+        advice_given = True
+        
+    if price > 20.0:
+        st.info("💰 **Pricing Strategy:** Games priced over $20 face fierce competition from AAA studios. Consider lowering to the $10-$15 sweet spot.")
+        advice_given = True
+        
+    if len(selected_tags) < 5:
+        st.info("🏷️ **Tagging:** The Steam algorithm relies heavily on tags. Aim for at least 5-7 accurate tags (e.g., add 'Singleplayer' or 'Atmospheric').")
+        advice_given = True
+        
+    if achievements == 0:
+        st.info("🏆 **Achievements:** Games with 0 achievements often see lower player retention. Adding even 10 basic achievements can boost your math.")
+        advice_given = True
+        
+    if not advice_given:
+        st.success("🌟 Your metadata is fully optimized! At this point, success comes down to your marketing, art style, and gameplay loop.")
