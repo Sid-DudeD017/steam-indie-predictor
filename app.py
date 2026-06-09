@@ -1,42 +1,26 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import re
 import datetime
 
 # ==========================================
-# 1. THE CLASS DEFINITION
-# ==========================================
-class IndieSuccessPredictor:
-    def __init__(self):
-        self.pipeline = None
-        
-    def _clean_text_tags(self, tag_string):
-        if pd.isna(tag_string): return "indie"
-        clean_str = re.sub(r'[^a-zA-Z\s,]', '', str(tag_string))
-        tags = [t.strip().lower() for t in clean_str.split(',') if t.strip()]
-        return ",".join(tags)
-
-    def load_model(self, path):
-        self.pipeline = joblib.load(path)
-        
-    def predict_success(self, game_dict):
-        game_dict['tags'] = self._clean_text_tags(game_dict.get('tags', ''))
-        df_input = pd.DataFrame([game_dict])
-        return self.pipeline.predict_proba(df_input)[0][1]
-
-# ==========================================
-# 2. STREAMLIT WEB APP UI
+# 1. STREAMLIT WEB APP UI & MODEL LOADING
 # ==========================================
 st.set_page_config(page_title="Indie Hit Predictor", page_icon="🎮", layout="centered")
 
 @st.cache_resource
 def load_brain():
-    model = IndieSuccessPredictor()
-    model.load_model("indie_model.pkl")
-    return model
+    # Because we used a Native Pipeline, we just load the file directly!
+    # No custom classes required.
+    return joblib.load("indie_model_optimized.pkl")
 
-predictor = load_brain()
+# Load the optimized model
+pipeline = load_brain()
+
+# Helper function to format the dictionary for the sklearn pipeline
+def get_prediction(data_dict):
+    df_input = pd.DataFrame([data_dict])
+    return pipeline.predict_proba(df_input)[0][1]
 
 st.title("🎮 Indie Game Success Predictor")
 st.markdown("Enter your game pitch below to see if it matches current Steam player trends for a breakout hit.")
@@ -81,7 +65,7 @@ with st.form("game_pitch_form"):
     submitted = st.form_submit_button("Predict Success Probability")
 
 # ==========================================
-# 3. PREDICTION & AI OPTIMIZER LOGIC
+# 2. PREDICTION & AI OPTIMIZER LOGIC
 # ==========================================
 if submitted:
     month_number = MONTHS.index(selected_month) + 1
@@ -95,18 +79,19 @@ if submitted:
     }
     
     with st.spinner('Analyzing Steam market trends...'):
-        base_prob = predictor.predict_success(user_data)
+        # Pass the raw data directly to our helper function
+        base_prob = get_prediction(user_data)
     
     st.divider()
     st.subheader("Prediction Results")
-    st.progress(base_prob)
+    st.progress(float(base_prob)) # Ensure progress bar receives a standard float
     st.metric(label="Probability of becoming an Indie Hit", value=f"{base_prob * 100:.2f}%")
     
     st.markdown("##### 📊 Market Context")
     st.markdown("> **Note:** The global success rate for new Indie games on Steam is roughly **6%**. A score above **15%** means your baseline metadata is severely outperforming the market!")
 
     # ==========================================
-    # 4. THE AI CONSULTANT (Counterfactual Optimizer)
+    # 3. THE AI CONSULTANT (Counterfactual Optimizer)
     # ==========================================
     st.divider()
     st.subheader("💡 AI Consultant: Optimization Path")
@@ -176,7 +161,7 @@ if submitted:
                 
                 test_data, msg = trick(simulated_data)
                 if test_data is not None:
-                    test_prob = predictor.predict_success(test_data)
+                    test_prob = get_prediction(test_data)
                     if test_prob > best_new_prob:
                         best_new_prob = test_prob
                         best_data = test_data
