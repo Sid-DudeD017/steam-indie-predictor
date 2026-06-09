@@ -2,16 +2,25 @@ import streamlit as st
 import pandas as pd
 import joblib
 import datetime
+import re 
 
 # ==========================================
 # 1. STREAMLIT WEB APP UI & MODEL LOADING
 # ==========================================
 st.set_page_config(page_title="Indie Hit Predictor", page_icon="🎮", layout="centered")
 
+def clean_tags_series(X_col):
+    """Takes a pandas Series of tags, cleans them, and returns a Series."""
+    def _clean(tag_string):
+        if pd.isna(tag_string): return "indie"
+        clean_str = re.sub(r'[^a-zA-Z\s,]', '', str(tag_string))
+        tags = [t.strip().lower() for t in clean_str.split(',') if t.strip()]
+        return ",".join(tags)
+    return X_col.apply(_clean)
+# ------------------------------------------------------------------------------
+
 @st.cache_resource
 def load_brain():
-    # Because we used a Native Pipeline, we just load the file directly!
-    # No custom classes required.
     return joblib.load("indie_model_optimized.pkl")
 
 # Load the optimized model
